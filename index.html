@@ -347,7 +347,7 @@ footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border
 <ul>
   <li>An <a href="https://eips.ethereum.org/EIPS/eip-7702">EIP-7702</a> authorization is signed with ECDSA and names the authority by its recovered address, so a leanSPHINCS key can't produce one. <a href="https://eips.ethereum.org/EIPS/eip-8141">EIP-8141</a> deliberately has no authorization list of its own.</li>
   <li>A codeless account never runs code of its own, so it cannot call <code>SETCODEFROM</code>.</li>
-  <li>Accepting leanSPHINCS in the default code was considered and dropped: deploying in the first transaction already gives a key-only onboarding path without help from anyone, while a default-code account would have no upgrade path, since 7702 is ECDSA-only.</li>
+  <li>Accepting leanSPHINCS in the default code is possible, but it gains little: deploying in the first transaction already gives a key-only onboarding path without help from anyone, while a default-code account would have no upgrade path, since 7702 is ECDSA-only. Anyone who considers it important can propose it in a separate PR to the EIP.</li>
 </ul>
 </div>
 </details>
