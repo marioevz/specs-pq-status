@@ -215,7 +215,7 @@ footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border
 <tr>
   <td class="what">Prove it off-chain or before the account exists (<code>eth_call</code>, sign-in, order books, <a href="https://eips.ethereum.org/EIPS/eip-6492">ERC-6492</a>)</td>
   <td class="status"><span class="badge no">Doesn't work</span></td>
-  <td>Outside a frame transaction there is no signature entry to look up, and the EVM cannot verify a leanSPHINCS signature by itself.</td>
+  <td>Outside a frame transaction there is no signature entry to look up, and the EVM cannot verify a leanSPHINCS signature by itself because no precompile exists for it (a verifier written in EVM code is possible but unmeasured).</td>
   <td class="evidence"><a href="https://github.com/marioevz/execution-specs/blob/5c02b396702727c40672c1f19fa9239cb328be9a/tests/bogota/eip8141_frame_transactions/test_leansphincs.py#L770">cannot_attest_outside</a></td>
 </tr>
 <tr>
