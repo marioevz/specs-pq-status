@@ -233,7 +233,7 @@ footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border
 <tr>
   <td class="what">Send transactions at a reasonable cost</td>
   <td class="status"><span class="badge warn">Works, with caveats</span></td>
-  <td>About 25× the gas of an ECDSA frame transaction, almost all of it for the 7,740 signature bytes rather than verification. See <a href="#cost">Cost</a>.</td>
+  <td>About 25× the gas of an ECDSA frame transaction, almost all of it for the 7,740 signature bytes rather than verification. See <a href="#cost">Cost</a>; <a href="https://eips.ethereum.org/EIPS/eip-8288">EIP-8288</a>, which would cut this, is not considered.</td>
   <td class="evidence"><a href="#cost">computed from the spec</a></td>
 </tr>
 <tr>
@@ -409,6 +409,7 @@ footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border
 </div>
 <p class="meta">A frame transaction with one verify frame, one sender frame with no data, one signature entry, and nonce 1, computed with the spec's <code>calculate_frame_transaction_intrinsic_cost</code> on the branch above. <a href="https://eips.ethereum.org/EIPS/eip-8141">EIP-8141</a>'s constants are provisional.</p>
 <p>So a leanSPHINCS transaction costs about 25 times as much gas as an ECDSA one, and about 95% of its minimum pays for the signature bytes. Lowering that cost is a question of pricing the bytes differently or of aggregating signatures, not of making verification cheaper. The same arithmetic applies to any in-contract verifier, which has to receive the 7,740 bytes as call data.</p>
+<div class="callout"><strong>Not considered here:</strong> <a href="https://eips.ethereum.org/EIPS/eip-8288">EIP-8288</a> proposes to cut this cost by referencing a proof instead of carrying the full signature in every transaction. These figures assume the signature is carried in full, as EIP-8141 with #12616 specifies today; how they change under <a href="https://eips.ethereum.org/EIPS/eip-8288">EIP-8288</a> has not been analyzed.</div>
 </section>
 
 <section id="open">
@@ -425,7 +426,7 @@ footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border
 <tr>
   <td class="what">Signature size and pricing</td>
   <td>The data floor makes each transaction cost at least about 523k gas, and 7.7 kB per transaction weighs on bandwidth and block size.</td>
-  <td>Aggregation (the EIP keeps signature bytes hidden from contracts so it stays possible), or a different price for signature bytes. Neither is specified.</td>
+  <td>Aggregation (the EIP keeps signature bytes hidden from contracts so it stays possible), or a different price for signature bytes. Neither is specified in EIP-8141. <a href="https://eips.ethereum.org/EIPS/eip-8288">EIP-8288</a>, which would reference a proof instead of carrying each signature, is not considered in this analysis.</td>
 </tr>
 <tr>
   <td class="what">Basis for the 12,600 gas price</td>
@@ -459,8 +460,8 @@ footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border
 </tr>
 <tr>
   <td class="what">Forward compatibility with <a href="https://eips.ethereum.org/EIPS/eip-8288">EIP-8288</a></td>
-  <td>Later post-quantum schemes and signature changes should fit without breaking these accounts.</td>
-  <td>Not yet assessed.</td>
+  <td>Later post-quantum schemes and signature changes should fit without breaking these accounts, and the proposal could change the cost picture above.</td>
+  <td>Not yet assessed. This page does not take it into account.</td>
 </tr>
 <tr>
   <td class="what">Applications that only accept ECDSA</td>
@@ -478,7 +479,7 @@ footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border
   <li><strong>Specification:</strong> <a href="https://eips.ethereum.org/EIPS/eip-8141">EIP-8141</a> with <a href="https://github.com/ethereum/EIPs/pull/12616">ethereum/EIPs#12616</a> applied (head <code>c8c0e3f8</code>).</li>
   <li><strong>Implementation and tests:</strong> the Python execution spec, branch <a href="https://github.com/marioevz/execution-specs/tree/eips/bogota/eip-8141-leansphincs"><code>eips/bogota/eip-8141-leansphincs</code></a> on <code>devnets/bogota/2</code>, draft PR <a href="https://github.com/ethereum/execution-specs/pull/3957">execution-specs#3957</a>. The draft is not for merging; it exists to coordinate. Test links point at commit <code>5c02b396</code>.</li>
   <li><strong>Tests:</strong> <code>tests/bogota/eip8141_frame_transactions/test_leansphincs.py</code> and <code>test_account_deployment.py</code>. Deployment tests run for all four signature schemes.</li>
-  <li><strong>Scope:</strong> the execution-layer account side only. Consensus-layer signatures, KZG commitments, and rollup proofs are out of scope here; see <a href="https://kevaundray.github.io/pq-chain-analysis/">pq-chain-analysis</a> for how mainnet applications depend on quantum-breakable cryptography.</li>
+  <li><strong>Scope:</strong> the execution-layer account side only. Consensus-layer signatures, KZG commitments, and rollup proofs are out of scope here, and so is <a href="https://eips.ethereum.org/EIPS/eip-8288">EIP-8288</a>: all costs assume full signatures in every transaction; see <a href="https://kevaundray.github.io/pq-chain-analysis/">pq-chain-analysis</a> for how mainnet applications depend on quantum-breakable cryptography.</li>
 </ul>
 </section>
 
