@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Post-Quantum Accounts Status</title>
+<meta name="description" content="What works and what doesn't for post-quantum (leanSPHINCS) Ethereum accounts under EIP-8141 frame transactions with ethereum/EIPs#12616, and the open questions.">
+<style>
+:root {
+  --bg: #fbfaf7;
+  --surface: #ffffff;
+  --text: #1c1b19;
+  --muted: #5f5c55;
+  --border: #e3dfd6;
+  --accent: #3b5bdb;
+  --code-bg: #f1eee7;
+  --ok: #1e7a46;
+  --ok-bg: #e3f4ea;
+  --warn: #8a5a00;
+  --warn-bg: #fbf0d9;
+  --no: #b3261e;
+  --no-bg: #fbe5e3;
+  --open: #5b3fb5;
+  --open-bg: #ece6fb;
+  --design: #45505c;
+  --design-bg: #e8ecf0;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141413;
+    --surface: #1d1c1a;
+    --text: #ece9e2;
+    --muted: #a7a399;
+    --border: #34322e;
+    --accent: #8aa2ff;
+    --code-bg: #26251f;
+    --ok: #6fd39b;
+    --ok-bg: #173826;
+    --warn: #f0c063;
+    --warn-bg: #3a2d10;
+    --no: #ff8a80;
+    --no-bg: #3d1a17;
+    --open: #b9a4ff;
+    --open-bg: #2a2142;
+    --design: #b8c2cc;
+    --design-bg: #262c33;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141413;
+  --surface: #1d1c1a;
+  --text: #ece9e2;
+  --muted: #a7a399;
+  --border: #34322e;
+  --accent: #8aa2ff;
+  --code-bg: #26251f;
+  --ok: #6fd39b;
+  --ok-bg: #173826;
+  --warn: #f0c063;
+  --warn-bg: #3a2d10;
+  --no: #ff8a80;
+  --no-bg: #3d1a17;
+  --open: #b9a4ff;
+  --open-bg: #2a2142;
+  --design: #b8c2cc;
+  --design-bg: #262c33;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+main { max-width: 980px; margin: 0 auto; padding: 32px 16px 80px; }
+header.top { border-bottom: 1px solid var(--border); padding-bottom: 24px; margin-bottom: 32px; }
+.eyebrow { font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+h1 { font-size: 34px; line-height: 1.2; margin: 0 0 12px; }
+h2 { font-size: 24px; margin: 48px 0 12px; padding-top: 8px; }
+h3 { font-size: 18px; margin: 28px 0 8px; }
+p { margin: 0 0 14px; }
+.lede { font-size: 18px; color: var(--muted); max-width: 760px; }
+a { color: var(--accent); }
+code { font: 0.88em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+.meta { font-size: 14px; color: var(--muted); }
+.meta span { display: inline-block; margin-right: 16px; }
+nav.toc { font-size: 14px; margin-top: 16px; }
+nav.toc a { margin-right: 14px; white-space: nowrap; }
+.table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th, td { text-align: left; vertical-align: top; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+th { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; background: var(--surface); }
+tr:last-child td { border-bottom: 0; }
+td.what { font-weight: 600; min-width: 200px; }
+td.status { white-space: nowrap; }
+td.evidence { font-size: 13px; min-width: 150px; }
+.badge { display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 999px; letter-spacing: .02em; }
+.ok { color: var(--ok); background: var(--ok-bg); }
+.warn { color: var(--warn); background: var(--warn-bg); }
+.no { color: var(--no); background: var(--no-bg); }
+.open { color: var(--open); background: var(--open-bg); }
+.design { color: var(--design); background: var(--design-bg); }
+.legend { display: flex; flex-wrap: wrap; gap: 10px 18px; font-size: 14px; color: var(--muted); margin: 0 0 14px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.callout { border: 1px solid var(--border); border-left: 4px solid var(--accent); background: var(--surface); border-radius: 8px; padding: 14px 16px; margin: 18px 0; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 18px 0; }
+.stat { border: 1px solid var(--border); border-radius: 10px; background: var(--surface); padding: 14px 16px; }
+.stat .num { font-size: 26px; font-weight: 700; line-height: 1.2; }
+.stat .lbl { font-size: 14px; color: var(--muted); }
+details { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); margin: 14px 0; }
+details > summary { cursor: pointer; padding: 10px 14px; font-weight: 600; font-size: 15px; }
+details > div { padding: 0 16px 6px; font-size: 15px; }
+details ul { padding-left: 20px; }
+ul { padding-left: 22px; }
+li { margin-bottom: 6px; }
+figure { margin: 20px 0; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); padding: 16px; }
+figure svg { width: 100%; height: auto; display: block; }
+figcaption { font-size: 14px; color: var(--muted); margin-top: 10px; }
+svg .box { fill: var(--bg); stroke: var(--border); stroke-width: 1.5; }
+svg .box-accent { fill: var(--open-bg); stroke: var(--open); stroke-width: 1.5; }
+svg .box-ok { fill: var(--ok-bg); stroke: var(--ok); stroke-width: 1.5; }
+svg text { fill: var(--text); font: 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+svg text.small { fill: var(--muted); font-size: 11.5px; }
+svg text.title { font-weight: 700; }
+svg .line { stroke: var(--muted); stroke-width: 1.5; fill: none; }
+svg .arrowhead { fill: var(--muted); }
+footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 14px; color: var(--muted); }
+@media (max-width: 640px) {
+  h1 { font-size: 27px; }
+  h2 { font-size: 21px; }
+  th, td { padding: 10px; }
+}
+</style>
+</head>
+<body>
+<main>
+
+<header class="top">
+  <p class="eyebrow">Ethereum · post-quantum accounts · specification status</p>
+  <h1>What a post-quantum account can do with today's specs</h1>
+  <p class="lede">EIP-8141 frame transactions plus <a href="https://github.com/ethereum/EIPs/pull/12616">ethereum/EIPs#12616</a> let a hash-based leanSPHINCS key authorize Ethereum transactions. This page tracks what that combination makes possible, what it doesn't, and the open questions, each backed by an executable test where one exists.</p>
+  <p class="meta">
+    <span>EIP-8141 with #12616 at <code>c8c0e3f8</code></span>
+    <span>Tests: <a href="https://github.com/ethereum/execution-specs/pull/3957">execution-specs#3957</a> at <code>5c02b396</code></span>
+    <span>Base: <code>devnets/bogota/2</code></span>
+  </p>
+  <nav class="toc">
+    <a href="#status">Status table</a>
+    <a href="#what-changes">What #12616 adds</a>
+    <a href="#lifecycle">Account lifecycle</a>
+    <a href="#contracts">Contracts</a>
+    <a href="#cost">Cost</a>
+    <a href="#open">Open questions</a>
+    <a href="#method">Method</a>
+  </nav>
+</header>
+
+<section id="status">
+<h2>Status at a glance</h2>
+<p>"Works" means the behavior is specified and exercised by a consensus test in the Python execution spec. It does not mean clients ship it: no fork includes EIP-8141 yet, and its gas constants are provisional.</p>
+<div class="legend">
+  <span><span class="badge ok">Works</span> specified and tested</span>
+  <span><span class="badge warn">Works, with caveats</span></span>
+  <span><span class="badge no">Doesn't work</span></span>
+  <span><span class="badge design">By design</span> deliberately left out</span>
+  <span><span class="badge open">Open</span> undecided or untested</span>
+</div>
+<div class="table-wrap">
+<table>
+<thead><tr><th>What you want to do</th><th>Status</th><th>How, or why not</th><th>Evidence</th></tr></thead>
+<tbody>
+<tr>
+  <td class="what">Control an account with only a leanSPHINCS key</td>
+  <td class="status"><span class="badge ok">Works</span></td>
+  <td>The account runs wallet code that checks the transaction's leanSPHINCS signature, which the protocol has already verified. Another key is rejected.</td>
+  <td class="evidence"><a href="https://github.com/marioevz/execution-specs/blob/5c02b396702727c40672c1f19fa9239cb328be9a/tests/bogota/eip8141_frame_transactions/test_leansphincs.py#L375">wallet_sender</a>, <a href="https://github.com/marioevz/execution-specs/blob/5c02b396702727c40672c1f19fa9239cb328be9a/tests/bogota/eip8141_frame_transactions/test_leansphincs.py#L414">rejects_other_key</a></td>
+</tr>
+<tr>
+  <td class="what">Create such an account without ever holding an ECDSA key</td>
+  <td class="status"><span class="badge ok">Works</span></td>
+  <td>The address is computed in advance from a factory and the wallet code, which embeds the owner's key. Its first transaction deploys the wallet and is approved by it.</td>
+  <td class="evidence"><a href="https://github.com/marioevz/execution-specs/blob/5c02b396702727c40672c1f19fa9239cb328be9a/tests/bogota/eip8141_frame_transactions/test_account_deployment.py#L257">account_deploys_itself</a></td>
+</tr>
+<tr>
+  <td class="what">Have someone else pay for that first transaction</td>
+  <td class="status"><span class="badge ok">Works</span></td>
+  <td>A sponsor approves payment in the same transaction; the new address needs no ETH.</td>
+  <td class="evidence"><a href="https://github.com/marioevz/execution-specs/blob/5c02b396702727c40672c1f19fa9239cb328be9a/tests/bogota/eip8141_frame_transactions/test_account_deployment.py#L289">sponsored_account_deploys_itself</a></td>
+</tr>
+<tr>
+  <td class="what">Not lose a new account to someone deploying it first</td>
+  <td class="status"><span class="badge ok">Works</span></td>
+  <td>Anyone can deploy the wallet, but only the committed code, which only the owner's key controls. The worst case is re-signing the first transaction with the next nonce.</td>
+  <td class="evidence"><a href="https://github.com/marioevz/execution-specs/blob/5c02b396702727c40672c1f19fa9239cb328be9a/tests/bogota/eip8141_frame_transactions/test_account_deployment.py#L393">account_deployment_front_run</a>, <a href="https://github.com/marioevz/execution-specs/blob/5c02b396702727c40672c1f19fa9239cb328be9a/tests/bogota/eip8141_frame_transactions/test_account_deployment.py#L348">rejects_other_key</a></td>
+</tr>
+<tr>
+  <td class="what">Keep an existing address and switch it to leanSPHINCS</td>
+  <td class="status"><span class="badge warn">Works, with caveats</span></td>
+  <td>The EOA adopts wallet code with <code>SETCODEFROM</code> (EIP-8298), after which its ECDSA key no longer authorizes frame transactions. Needs EIP-8298, and the migration itself is signed with ECDSA, so it must happen before that key is at risk.</td>
+  <td class="evidence"><a href="https://github.com/marioevz/execution-specs/blob/5c02b396702727c40672c1f19fa9239cb328be9a/tests/bogota/eip8141_frame_transactions/test_leansphincs.py#L451">eoa_migrates</a>, <a href="https://github.com/marioevz/execution-specs/blob/5c02b396702727c40672c1f19fa9239cb328be9a/tests/bogota/eip8141_frame_transactions/test_leansphincs.py#L494">rejects_secp256k1</a></td>
+</tr>
+<tr>
+  <td class="what">Use leanSPHINCS from a plain account with no code</td>
+  <td class="status"><span class="badge design">By design</span></td>
+  <td>The built-in default code accepts only ECDSA. A post-quantum user deploys a wallet instead, which the rows above show needs no outside help.</td>
+  <td class="evidence"><a href="https://github.com/marioevz/execution-specs/blob/5c02b396702727c40672c1f19fa9239cb328be9a/tests/bogota/eip8141_frame_transactions/test_leansphincs.py#L272">default_code_rejects</a></td>
+</tr>
+<tr>
+  <td class="what">Prove to a contract that you signed something, during a transaction (EIP-1271)</td>
+  <td class="status"><span class="badge ok">Works</span></td>
+  <td>The signature travels in the transaction as an extra entry; the wallet's <code>isValidSignature</code> looks it up. A relayer or solver can submit it, and the signature argument is 32 bytes, so it fits contracts that cap it at 65.</td>
+  <td class="evidence"><a href="https://github.com/marioevz/execution-specs/blob/5c02b396702727c40672c1f19fa9239cb328be9a/tests/bogota/eip8141_frame_transactions/test_leansphincs.py#L648">attests_signature</a>, <a href="https://github.com/marioevz/execution-specs/blob/5c02b396702727c40672c1f19fa9239cb328be9a/tests/bogota/eip8141_frame_transactions/test_leansphincs.py#L707">rejects_attestation</a></td>
+</tr>
+<tr>
+  <td class="what">Prove it off-chain or before the account exists (<code>eth_call</code>, sign-in, order books, ERC-6492)</td>
+  <td class="status"><span class="badge no">Doesn't work</span></td>
+  <td>Outside a frame transaction there is no signature entry to look up, and the EVM cannot verify a leanSPHINCS signature by itself.</td>
+  <td class="evidence"><a href="https://github.com/marioevz/execution-specs/blob/5c02b396702727c40672c1f19fa9239cb328be9a/tests/bogota/eip8141_frame_transactions/test_leansphincs.py#L770">cannot_attest_outside</a></td>
+</tr>
+<tr>
+  <td class="what">Use apps that only accept ECDSA signatures (<code>ecrecover</code>, EIP-2612 <code>permit</code>)</td>
+  <td class="status"><span class="badge no">Doesn't work</span></td>
+  <td>Those contracts must change to ask the account (EIP-1271) instead. This is outside what the protocol can fix; <a href="https://kevaundray.github.io/pq-chain-analysis/">pq-chain-analysis</a> measures how much of mainnet this is.</td>
+  <td class="evidence">—</td>
+</tr>
+<tr>
+  <td class="what">Verify a leanSPHINCS signature inside any contract, for any message</td>
+  <td class="status"><span class="badge open">Open</span></td>
+  <td>No precompile. A verifier written in EVM code is possible since leanSPHINCS hashes with Keccak-256, but its cost is unmeasured.</td>
+  <td class="evidence">—</td>
+</tr>
+<tr>
+  <td class="what">Send transactions at a reasonable cost</td>
+  <td class="status"><span class="badge warn">Works, with caveats</span></td>
+  <td>About 25× the gas of an ECDSA frame transaction, almost all of it for the 7,740 signature bytes rather than verification. See <a href="#cost">Cost</a>.</td>
+  <td class="evidence"><a href="#cost">computed from the spec</a></td>
+</tr>
+<tr>
+  <td class="what">Propagate through the public mempool</td>
+  <td class="status"><span class="badge open">Open</span></td>
+  <td>The EIP specifies mempool rules for deploying and validating, and the gas caps leave room for leanSPHINCS. There are no mempool tests yet.</td>
+  <td class="evidence">—</td>
+</tr>
+<tr>
+  <td class="what">Sign as many transactions as you like with one key</td>
+  <td class="status"><span class="badge warn">Works, with caveats</span></td>
+  <td>A key is rated for 2<sup>30</sup> signatures. The protocol does not count; a high-volume signer such as a paymaster must rotate keys itself.</td>
+  <td class="evidence">EIP security considerations</td>
+</tr>
+<tr>
+  <td class="what">Aggregate signatures to save block space</td>
+  <td class="status"><span class="badge open">Open</span></td>
+  <td>Not specified. The EIP hides signature bytes from contracts precisely so that they can be aggregated later.</td>
+  <td class="evidence">—</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<section id="what-changes">
+<h2>What #12616 adds</h2>
+<p>EIP-8141 introduces frame transactions: a transaction is a list of frames, and the account itself, running its own code, approves who sends it and who pays. Signatures sit in a separate list that the protocol verifies before anything runs. Contracts can read who signed (the scheme and the signer) but not the signature bytes.</p>
+<p>#12616 adds a fourth signature scheme to that list, <strong>leanSPHINCS</strong>: a stateless, hash-based signature over Keccak-256 whose security does not depend on the hardness of discrete logarithms, so a quantum computer does not break it. The other schemes are ECDSA over secp256k1 (today's Ethereum keys), P-256 (passkeys), and <code>ARBITRARY</code>, whose bytes the protocol passes to the account's code unverified.</p>
+<div class="stats">
+  <div class="stat"><div class="num">32 bytes</div><div class="lbl">public key, which is also the signer</div></div>
+  <div class="stat"><div class="num">7,740 bytes</div><div class="lbl">signature (ECDSA: 65)</div></div>
+  <div class="stat"><div class="num">12,600 gas</div><div class="lbl">to verify (ECDSA: 2,800)</div></div>
+  <div class="stat"><div class="num">2<sup>30</sup></div><div class="lbl">signatures per key</div></div>
+</div>
+<p>Just as important is what #12616 leaves out. The built-in default code, which lets a codeless account send frame transactions, still accepts only ECDSA, and there is no precompile for verifying leanSPHINCS signatures in contracts. A leanSPHINCS key therefore only controls an account whose code checks it.</p>
+<details>
+<summary>Spec details for implementers</summary>
+<div>
+<ul>
+  <li>Scheme numbering: <code>ARBITRARY = 0x0</code>, <code>SECP256K1 = 0x1</code>, <code>P256 = 0x2</code>, <code>LEANSPHINCS = 0x3</code>. New protocol-validated schemes append after the existing ones.</li>
+  <li>A <code>LEANSPHINCS</code> entry's <code>signer</code> must be exactly the 32-byte public key (any other length is an invalid frame). Its resolved signer is that key, so <code>SIGPARAM(i, RESOLVED_SIGNER)</code> returns the full key as one word, not an address: an account tells the cases apart by <code>SIGPARAM(i, SCHEME)</code>.</li>
+  <li>The public key is the 16-byte root of the top tree followed by the 16-byte public parameter. Verification is the <code>verify</code> of EthLib's Cryptography/Sphincs module at <code>03b7e4dd</code>; the spec calls it through <a href="https://github.com/ethereum/lean-pq-bindings">py-lean-pq</a>.</li>
+  <li>The raw signature bytes are not introspectable: <code>SIGPARAM(i, SIGNATURE_LENGTH)</code> and <code>SIGDATACOPY</code> halt for protocol-validated entries (<a href="https://github.com/marioevz/execution-specs/blob/5c02b396702727c40672c1f19fa9239cb328be9a/tests/bogota/eip8141_frame_transactions/test_leansphincs.py#L345">test</a>).</li>
+  <li>Invalid encodings and tampered signatures are covered by <a href="https://github.com/marioevz/execution-specs/blob/5c02b396702727c40672c1f19fa9239cb328be9a/tests/bogota/eip8141_frame_transactions/test_leansphincs.py#L241">test_leansphincs_entry_validation</a>.</li>
+</ul>
+</div>
+</details>
+</section>
+
+<section id="lifecycle">
+<h2>An account's lifecycle</h2>
+
+<h3>Getting an account: deploy it in the first transaction</h3>
+<p>A new user with only a leanSPHINCS key computes their address in advance. It is the <code>CREATE2</code> address of a public factory and of wallet code that embeds their public key, so the address itself commits to the key. Anyone can send ETH to it. The account's first transaction then does two things in order: a <em>deploy</em> frame asks the factory to create the wallet at the account's own address, and a <em>verify</em> frame runs the wallet just created, which checks the leanSPHINCS signature and approves the transaction. If the address holds no ETH, a sponsor can approve payment instead.</p>
+<figure>
+<svg viewBox="0 0 920 230" role="img" aria-label="Counterfactual deployment: the address is computed from the factory and wallet code, funded, then the first frame transaction deploys the wallet and the wallet approves the transaction.">
+  <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead"/></marker></defs>
+  <rect x="10" y="20" width="200" height="90" rx="8" class="box"/>
+  <text x="24" y="46" class="title">1. Compute the address</text>
+  <text x="24" y="70" class="small">CREATE2(factory, salt,</text>
+  <text x="24" y="88" class="small">wallet code ∋ public key)</text>
+  <rect x="240" y="20" width="160" height="90" rx="8" class="box"/>
+  <text x="254" y="46" class="title">2. Fund it</text>
+  <text x="254" y="70" class="small">or rely on a sponsor</text>
+  <text x="254" y="88" class="small">no code yet</text>
+  <rect x="430" y="10" width="480" height="210" rx="10" class="box-accent"/>
+  <text x="446" y="36" class="title">3. First frame transaction, sender = that address</text>
+  <rect x="446" y="52" width="140" height="70" rx="6" class="box"/>
+  <text x="458" y="76" class="title">deploy</text>
+  <text x="458" y="96" class="small">factory CREATE2s</text>
+  <text x="458" y="112" class="small">the wallet here</text>
+  <rect x="606" y="52" width="140" height="70" rx="6" class="box"/>
+  <text x="618" y="76" class="title">verify</text>
+  <text x="618" y="96" class="small">new wallet checks</text>
+  <text x="618" y="112" class="small">key, then APPROVE</text>
+  <rect x="766" y="52" width="128" height="70" rx="6" class="box"/>
+  <text x="778" y="76" class="title">sender</text>
+  <text x="778" y="96" class="small">the user's</text>
+  <text x="778" y="112" class="small">actual call</text>
+  <rect x="446" y="140" width="448" height="62" rx="6" class="box-ok"/>
+  <text x="458" y="164" class="title">signatures: [ LEANSPHINCS, signer = public key ]</text>
+  <text x="458" y="186" class="small">verified by the protocol before any frame runs; the wallet reads only scheme and signer</text>
+  <path d="M210 65 H236" class="line" marker-end="url(#arr)"/>
+  <path d="M400 65 H426" class="line" marker-end="url(#arr)"/>
+  <path d="M586 87 H602" class="line" marker-end="url(#arr)"/>
+  <path d="M746 87 H762" class="line" marker-end="url(#arr)"/>
+</svg>
+<figcaption>The deploy and verify frames are EIP-8141's "deploy new account" pattern (Example 1b). The tests run it for all four signature schemes.</figcaption>
+</figure>
+<p><strong>Front-running is harmless.</strong> Anyone can call the factory first, but all they can deploy is the wallet the address commits to, which only the owner's key controls. Deploying it does bump the account's nonce to 1, so a first transaction already signed for nonce 0 becomes invalid and has to be signed again. Before deployment, taking over the address would require finding different wallet code with the same 160-bit address, a preimage search of about 2<sup>160</sup> work, or 2<sup>80</sup> with Grover's algorithm.</p>
+<details>
+<summary>Spec details for implementers</summary>
+<div>
+<ul>
+  <li>For this to be safe, the factory must not depend on who calls it, the owner must be fixed in the initcode (no <code>initialize()</code> call afterwards), and the wallet must have no way to change its owner that bypasses the key.</li>
+  <li>Whoever writes the wallet code could plant a backdoor through a 2<sup>80</sup> collision search on the address (classically). Users should rely on audited, widely used wallet code.</li>
+  <li>The test factory is a 23-byte <code>CREATE2</code> forwarder in the pre-state (<a href="https://github.com/marioevz/execution-specs/blob/5c02b396702727c40672c1f19fa9239cb328be9a/tests/bogota/eip8141_frame_transactions/test_account_deployment.py#L62">source</a>). EIP-7997's canonical factory is not in the Bogota devnet yet.</li>
+  <li>Sponsored deployment: the deployment creates the sender account, so when the sponsor's <code>APPROVE_PAYMENT</code> increments the sender's nonce, it creates no account and needs no state gas. Without a deployment, approving payment for a nonexistent sender charges <code>NEW_ACCOUNT</code> state gas first (<code>test_state_gas.py::test_approve_creates_sender</code>).</li>
+  <li>The sender's nonce is incremented once per transaction, when payment is approved, so it protects the sender even when someone else pays. Every empty-<code>msg</code> signature commits to it through the canonical signature hash.</li>
+  <li>The keyed nonces of EIP-8250 on the devnet would let a transaction survive a front-run deployment, since deploying only bumps the account nonce. This is untested.</li>
+</ul>
+</div>
+</details>
+
+<h3>Keeping an existing address</h3>
+<p>Someone who already holds an ECDSA account can keep its address: they delegate it (EIP-7702) to a small contract that calls <code>SETCODEFROM</code> (EIP-8298) to copy a leanSPHINCS wallet's code into the account. The account then has real code rather than a delegation, so the old ECDSA key no longer authorizes frame transactions from it. This depends on EIP-8298, which the devnet includes, and the migration transaction is itself signed with ECDSA, so it has to happen while that key is still safe.</p>
+<details>
+<summary>Why not EIP-7702 or a leanSPHINCS default code?</summary>
+<div>
+<ul>
+  <li>An EIP-7702 authorization is signed with ECDSA and names the authority by its recovered address, so a leanSPHINCS key can't produce one. EIP-8141 deliberately has no authorization list of its own.</li>
+  <li>A codeless account never runs code of its own, so it cannot call <code>SETCODEFROM</code>.</li>
+  <li>Accepting leanSPHINCS in the default code was considered and dropped: deploying in the first transaction already gives a key-only onboarding path without help from anyone, while a default-code account would have no upgrade path, since 7702 is ECDSA-only.</li>
+</ul>
+</div>
+</details>
+</section>
+
+<section id="contracts">
+<h2>Interacting with contracts</h2>
+<p>Many applications ask the user to sign a message rather than send a transaction: permits, orders, sign-in. Contract wallets answer these through <a href="https://eips.ethereum.org/EIPS/eip-1271">EIP-1271</a>: the application calls the wallet's <code>isValidSignature(hash, signature)</code>. For an ECDSA or P-256 wallet the wallet's code verifies the signature itself using a precompile. There is no such precompile for leanSPHINCS.</p>
+<p>What works today is to put the signature in the transaction. A frame transaction can carry an extra leanSPHINCS entry that signs an explicit 32-byte digest instead of the transaction. The protocol verifies it like any other entry, and code running anywhere in that transaction can read who signed what. The wallet then answers <code>isValidSignature</code> by looking the entry up.</p>
+<figure>
+<svg viewBox="0 0 920 200" role="img" aria-label="Attestation inside a frame transaction: a relayer's transaction carries the owner's leanSPHINCS entry; the dapp calls the wallet's isValidSignature, which reads the entry with SIGPARAM.">
+  <defs><marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead"/></marker></defs>
+  <rect x="10" y="10" width="900" height="180" rx="10" class="box-accent"/>
+  <text x="26" y="36" class="title">Frame transaction sent by a relayer, a solver, or the wallet itself</text>
+  <rect x="26" y="54" width="210" height="62" rx="6" class="box"/>
+  <text x="38" y="78" class="title">dapp contract</text>
+  <text x="38" y="98" class="small">is this hash signed?</text>
+  <rect x="300" y="54" width="290" height="62" rx="6" class="box"/>
+  <text x="312" y="78" class="title">wallet.isValidSignature(hash, i)</text>
+  <text x="312" y="98" class="small">entry i: LEANSPHINCS, owner's key?</text>
+  <rect x="654" y="54" width="240" height="62" rx="6" class="box"/>
+  <text x="666" y="78" class="title">returns 0x1626ba7e</text>
+  <text x="666" y="98" class="small">or 0 when it doesn't match</text>
+  <rect x="300" y="132" width="594" height="44" rx="6" class="box-ok"/>
+  <text x="312" y="159" class="title">signatures[i]: LEANSPHINCS, msg = keccak256(wallet ‖ hash)</text>
+  <path d="M236 85 H296" class="line" marker-end="url(#arr2)"/>
+  <path d="M590 85 H650" class="line" marker-end="url(#arr2)"/>
+  <path d="M445 116 V128" class="line" marker-end="url(#arr2)"/>
+</svg>
+<figcaption>The signature argument is just the entry's index. The signed digest includes the wallet's address so that two wallets owned by the same key don't share attestations.</figcaption>
+</figure>
+<p>This covers on-chain settlement, where a contract checks the signature inside a transaction, provided whoever submits it uses a frame transaction. It does not cover checks made outside a transaction, such as an order book or sign-in backend calling <code>isValidSignature</code> through <code>eth_call</code>, or ERC-6492 checks before the wallet is deployed. There the call simply fails. Closing that gap needs a way to verify leanSPHINCS in the EVM, which is an <a href="#open">open question</a>.</p>
+<p>Contracts that only accept ECDSA, for example by calling <code>ecrecover</code> or implementing EIP-2612 <code>permit</code> without EIP-1271, can't be used by any smart account, post-quantum or not. Fixing them is up to the applications; <a href="https://kevaundray.github.io/pq-chain-analysis/">pq-chain-analysis</a> measures how much value sits behind them.</p>
+<details>
+<summary>Spec details for implementers</summary>
+<div>
+<ul>
+  <li>The wallet checks <code>SIGPARAM(i, SCHEME) == LEANSPHINCS</code>, <code>SIGPARAM(i, RESOLVED_SIGNER) == owner_key</code>, and <code>SIGPARAM(i, MSG) == keccak256(address(this) ‖ hash)</code>, with <code>i</code> ABI-decoded from <code>signature</code> (<a href="https://github.com/marioevz/execution-specs/blob/5c02b396702727c40672c1f19fa9239cb328be9a/tests/bogota/eip8141_frame_transactions/test_leansphincs.py#L576">source</a>).</li>
+  <li><code>SIGPARAM</code> works at any call depth within a frame transaction and halts outside one, so the wallet's call fails rather than returning a wrong answer.</li>
+  <li>The EIP's warning about approving transactions on explicit-<code>msg</code> signatures does not apply: <code>isValidSignature</code> attests to a hash and authorizes no frames. Replay protection for the hash itself is the application's responsibility, as with EIP-1271 today.</li>
+  <li>Every attestation consumes one of the key's 2<sup>30</sup> signatures.</li>
+</ul>
+</div>
+</details>
+</section>
+
+<section id="cost">
+<h2>Cost</h2>
+<p>The 12,600 gas for verifying a leanSPHINCS signature is small. Carrying it is not: its 7,740 bytes are priced as transaction data, and EIP-7976's data floor makes data-heavy transactions pay at least 64 gas per byte. For a simple transaction the floor is what's charged.</p>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Signature</th><th>Bytes</th><th>Verification gas</th><th>Intrinsic gas</th><th>Data floor (minimum charged)</th></tr></thead>
+<tbody>
+<tr><td class="what">ECDSA (secp256k1)</td><td>65</td><td>2,800</td><td>17,142</td><td>21,318</td></tr>
+<tr><td class="what">P-256</td><td>128</td><td>6,700</td><td>22,050</td><td>29,250</td></tr>
+<tr><td class="what">leanSPHINCS</td><td>7,740</td><td>12,600</td><td>149,934</td><td><strong>523,086</strong></td></tr>
+</tbody>
+</table>
+</div>
+<p class="meta">A frame transaction with one verify frame, one sender frame with no data, one signature entry, and nonce 1, computed with the spec's <code>calculate_frame_transaction_intrinsic_cost</code> on the branch above. EIP-8141's constants are provisional.</p>
+<p>So a leanSPHINCS transaction costs about 25 times as much gas as an ECDSA one, and about 95% of its minimum pays for the signature bytes. Lowering that cost is a question of pricing the bytes differently or of aggregating signatures, not of making verification cheaper. The same arithmetic applies to any in-contract verifier, which has to receive the 7,740 bytes as call data.</p>
+</section>
+
+<section id="open">
+<h2>Open questions</h2>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Question</th><th>Why it matters</th><th>Options and state</th></tr></thead>
+<tbody>
+<tr>
+  <td class="what">Verifying leanSPHINCS in the EVM</td>
+  <td>Needed for EIP-1271 checks outside a frame transaction (off-chain, before deployment) and for contracts that verify signatures on arbitrary messages.</td>
+  <td>A precompile (the 7,740 bytes of input still cost far more than verification), an EVM verifier (feasible with Keccak-256, unmeasured), or accepting the gap. Not committed either way.</td>
+</tr>
+<tr>
+  <td class="what">Signature size and pricing</td>
+  <td>The data floor makes each transaction cost at least about 523k gas, and 7.7 kB per transaction weighs on bandwidth and block size.</td>
+  <td>Aggregation (the EIP keeps signature bytes hidden from contracts so it stays possible), or a different price for signature bytes. Neither is specified.</td>
+</tr>
+<tr>
+  <td class="what">Basis for the 12,600 gas price</td>
+  <td>Verification cost has to be benchmarked across clients.</td>
+  <td>Provisional, like EIP-8141's other constants.</td>
+</tr>
+<tr>
+  <td class="what">Expiry frame before a deploy frame</td>
+  <td>The EIP says a deploy frame must come first and also that an expiry frame may only come first and is skipped when matching. It is unclear whether <code>[expiry, deploy, verify]</code> is a valid mempool prefix.</td>
+  <td>Needs clarification in the EIP.</td>
+</tr>
+<tr>
+  <td class="what">Public mempool coverage</td>
+  <td>New accounts depend on the deploy prefix propagating.</td>
+  <td>Cases are drafted for the mempool test format (accepted and rejected deploy prefixes, gas caps per scheme, a front-run deploy that is valid on-chain but must be dropped). Not implemented.</td>
+</tr>
+<tr>
+  <td class="what">Keyed nonces and front-running</td>
+  <td>A front-run deployment forces a re-sign with the account nonce.</td>
+  <td>EIP-8250 keyed nonces, on the devnet but not in EIP-8141's text, would avoid it. Untested.</td>
+</tr>
+<tr>
+  <td class="what">Canonical factory and <code>SETDELEGATE</code></td>
+  <td>Wallets should deploy through a shared, well-known factory.</td>
+  <td>EIP-7997 (factory) and EIP-7819 (<code>SETDELEGATE</code>) are not in the Bogota devnet yet.</td>
+</tr>
+<tr>
+  <td class="what">Signature budget per key</td>
+  <td>2<sup>30</sup> signatures per key, every attestation included, with no protocol counter.</td>
+  <td>A wallet and paymaster concern. Key rotation patterns are not specified.</td>
+</tr>
+<tr>
+  <td class="what">Forward compatibility with EIP-8288</td>
+  <td>Later post-quantum schemes and signature changes should fit without breaking these accounts.</td>
+  <td>Not yet assessed.</td>
+</tr>
+<tr>
+  <td class="what">Applications that only accept ECDSA</td>
+  <td>Post-quantum accounts can't use them at all.</td>
+  <td>An application-level migration to EIP-1271, outside protocol scope.</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<section id="method">
+<h2>Method and sources</h2>
+<ul>
+  <li><strong>Specification:</strong> <a href="https://eips.ethereum.org/EIPS/eip-8141">EIP-8141</a> with <a href="https://github.com/ethereum/EIPs/pull/12616">ethereum/EIPs#12616</a> applied (head <code>c8c0e3f8</code>).</li>
+  <li><strong>Implementation and tests:</strong> the Python execution spec, branch <a href="https://github.com/marioevz/execution-specs/tree/eips/bogota/eip-8141-leansphincs"><code>eips/bogota/eip-8141-leansphincs</code></a> on <code>devnets/bogota/2</code>, draft PR <a href="https://github.com/ethereum/execution-specs/pull/3957">execution-specs#3957</a>. The draft is not for merging; it exists to coordinate. Test links point at commit <code>5c02b396</code>.</li>
+  <li><strong>Tests:</strong> <code>tests/bogota/eip8141_frame_transactions/test_leansphincs.py</code> and <code>test_account_deployment.py</code>. Deployment tests run for all four signature schemes.</li>
+  <li><strong>Scope:</strong> the execution-layer account side only. Consensus-layer signatures, KZG commitments, and rollup proofs are out of scope here; see <a href="https://kevaundray.github.io/pq-chain-analysis/">pq-chain-analysis</a> for how mainnet applications depend on quantum-breakable cryptography.</li>
+</ul>
+</section>
+
+<footer>
+  Source: <a href="https://github.com/marioevz/specs-pq-status">github.com/marioevz/specs-pq-status</a>. Corrections welcome as issues or pull requests.
+</footer>
+
+</main>
+</body>
+</html>
