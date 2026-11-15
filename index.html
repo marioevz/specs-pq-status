@@ -197,8 +197,8 @@ footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border
 <tr>
   <td class="what">Keep an existing address and switch it to leanSPHINCS</td>
   <td class="status"><span class="badge warn">Works, with caveats</span></td>
-  <td>The EOA adopts wallet code with <code>SETCODEFROM</code> (<a href="https://eips.ethereum.org/EIPS/eip-8298">EIP-8298</a>), after which its ECDSA key no longer authorizes frame transactions. Needs <a href="https://eips.ethereum.org/EIPS/eip-8298">EIP-8298</a>, and the migration itself is signed with ECDSA, so it must happen before that key is at risk.</td>
-  <td class="evidence"><a href="https://github.com/marioevz/execution-specs/blob/5c02b396702727c40672c1f19fa9239cb328be9a/tests/bogota/eip8141_frame_transactions/test_leansphincs.py#L451">eoa_migrates</a>, <a href="https://github.com/marioevz/execution-specs/blob/5c02b396702727c40672c1f19fa9239cb328be9a/tests/bogota/eip8141_frame_transactions/test_leansphincs.py#L494">rejects_secp256k1</a></td>
+  <td>The EOA adopts wallet code with <code>SETCODEFROM</code> (<a href="https://eips.ethereum.org/EIPS/eip-8298">EIP-8298</a>), after which its ECDSA key no longer authorizes frame transactions, and <a href="https://eips.ethereum.org/EIPS/eip-8151">EIP-8151</a> stops <code>ecrecover</code> from accepting it. Needs <a href="https://eips.ethereum.org/EIPS/eip-8298">EIP-8298</a>, and the migration itself is signed with ECDSA, so it must happen before that key is at risk.</td>
+  <td class="evidence"><a href="https://github.com/marioevz/execution-specs/blob/5c02b396702727c40672c1f19fa9239cb328be9a/tests/bogota/eip8141_frame_transactions/test_leansphincs.py#L451">eoa_migrates</a>, <a href="https://github.com/marioevz/execution-specs/blob/5c02b396702727c40672c1f19fa9239cb328be9a/tests/bogota/eip8141_frame_transactions/test_leansphincs.py#L494">rejects_secp256k1</a>, <a href="https://github.com/ethereum/execution-specs/blob/635ffec4874ce98d89759d36b46401d5f607c1c5/tests/bogota/eip8298_setcodefrom/test_account_migration.py#L237">withheld_from_ecrecover</a></td>
 </tr>
 <tr>
   <td class="what">Use leanSPHINCS from a plain account with no code</td>
@@ -221,8 +221,8 @@ footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border
 <tr>
   <td class="what">Use apps that only accept ECDSA signatures (<code>ecrecover</code>, <a href="https://eips.ethereum.org/EIPS/eip-2612">EIP-2612</a> <code>permit</code>)</td>
   <td class="status"><span class="badge no">Doesn't work</span></td>
-  <td>Those contracts must change to ask the account (<a href="https://eips.ethereum.org/EIPS/eip-1271">EIP-1271</a>) instead. This is outside what the protocol can fix; <a href="https://kevaundray.github.io/pq-chain-analysis/">pq-chain-analysis</a> measures how much of mainnet this is.</td>
-  <td class="evidence">—</td>
+  <td>Those contracts must change to ask the account (<a href="https://eips.ethereum.org/EIPS/eip-1271">EIP-1271</a>) instead. With <a href="https://eips.ethereum.org/EIPS/eip-8151">EIP-8151</a> they fail safely: <code>ecrecover</code> returns nothing for an account holding code, so a migrated account's old ECDSA key can't sign a <code>permit</code> for it. This is outside what the protocol can fix; <a href="https://kevaundray.github.io/pq-chain-analysis/">pq-chain-analysis</a> measures how much of mainnet this is.</td>
+  <td class="evidence"><a href="https://github.com/ethereum/execution-specs/blob/635ffec4874ce98d89759d36b46401d5f607c1c5/tests/bogota/eip8298_setcodefrom/test_account_migration.py#L237">withheld_from_ecrecover</a></td>
 </tr>
 <tr>
   <td class="what">Verify a leanSPHINCS signature inside any contract, for any message</td>
@@ -340,13 +340,14 @@ footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border
 </details>
 
 <h3>Keeping an existing address</h3>
-<p>Someone who already holds an ECDSA account can keep its address: they delegate it (<a href="https://eips.ethereum.org/EIPS/eip-7702">EIP-7702</a>) to a small contract that calls <code>SETCODEFROM</code> (<a href="https://eips.ethereum.org/EIPS/eip-8298">EIP-8298</a>) to copy a leanSPHINCS wallet's code into the account. The account then has real code rather than a delegation, so the old ECDSA key no longer authorizes frame transactions from it. This depends on <a href="https://eips.ethereum.org/EIPS/eip-8298">EIP-8298</a>, which the devnet includes, and the migration transaction is itself signed with ECDSA, so it has to happen while that key is still safe.</p>
+<p>Someone who already holds an ECDSA account can keep its address: they delegate it (<a href="https://eips.ethereum.org/EIPS/eip-7702">EIP-7702</a>) to a small contract that calls <code>SETCODEFROM</code> (<a href="https://eips.ethereum.org/EIPS/eip-8298">EIP-8298</a>) to copy a leanSPHINCS wallet's code into the account. The account then has real code rather than a delegation, so the old ECDSA key no longer authorizes frame transactions from it (<a href="https://eips.ethereum.org/EIPS/eip-3607">EIP-3607</a>), and <a href="https://eips.ethereum.org/EIPS/eip-8151">EIP-8151</a> makes <code>ecrecover</code> return nothing for it, so contracts that check signatures with <code>ecrecover</code>, such as <a href="https://eips.ethereum.org/EIPS/eip-2612">EIP-2612</a> <code>permit</code>, stop accepting that key too. This depends on <a href="https://eips.ethereum.org/EIPS/eip-8298">EIP-8298</a> and <a href="https://eips.ethereum.org/EIPS/eip-8151">EIP-8151</a>, both of which the devnet includes, and the migration transaction is itself signed with ECDSA, so it has to happen while that key is still safe.</p>
 <details>
 <summary>Why not <a href="https://eips.ethereum.org/EIPS/eip-7702">EIP-7702</a> or a leanSPHINCS default code?</summary>
 <div>
 <ul>
   <li>An <a href="https://eips.ethereum.org/EIPS/eip-7702">EIP-7702</a> authorization is signed with ECDSA and names the authority by its recovered address, so a leanSPHINCS key can't produce one. <a href="https://eips.ethereum.org/EIPS/eip-8141">EIP-8141</a> deliberately has no authorization list of its own.</li>
   <li>A codeless account never runs code of its own, so it cannot call <code>SETCODEFROM</code>.</li>
+  <li>A delegation alone is not enough: the ECDSA key can still send transactions and re-delegate, and <a href="https://eips.ethereum.org/EIPS/eip-8151">EIP-8151</a> still lets <code>ecrecover</code> return an account whose code is a delegation indicator. Only real code installed with <code>SETCODEFROM</code> withdraws the key everywhere.</li>
   <li>Accepting leanSPHINCS in the default code is possible, but it gains little: deploying in the first transaction already gives a key-only onboarding path without help from anyone, while a default-code account would have no upgrade path, since 7702 is ECDSA-only. Anyone who considers it important can propose it in a separate PR to the EIP.</li>
 </ul>
 </div>
@@ -380,7 +381,7 @@ footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border
 <figcaption>The signature argument is just the entry's index. The signed digest includes the wallet's address so that two wallets owned by the same key don't share attestations.</figcaption>
 </figure>
 <p>This covers on-chain settlement, where a contract checks the signature inside a transaction, provided whoever submits it uses a frame transaction. It does not cover checks made outside a transaction, such as an order book or sign-in backend calling <code>isValidSignature</code> through <code>eth_call</code>, or <a href="https://eips.ethereum.org/EIPS/eip-6492">ERC-6492</a> checks before the wallet is deployed. There the call simply fails. Closing that gap needs a way to verify leanSPHINCS in the EVM, which is an <a href="#open">open question</a>.</p>
-<p>Contracts that only accept ECDSA, for example by calling <code>ecrecover</code> or implementing <a href="https://eips.ethereum.org/EIPS/eip-2612">EIP-2612</a> <code>permit</code> without <a href="https://eips.ethereum.org/EIPS/eip-1271">EIP-1271</a>, can't be used by any smart account, post-quantum or not. Fixing them is up to the applications; <a href="https://kevaundray.github.io/pq-chain-analysis/">pq-chain-analysis</a> measures how much value sits behind them.</p>
+<p>Contracts that only accept ECDSA, for example by calling <code>ecrecover</code> or implementing <a href="https://eips.ethereum.org/EIPS/eip-2612">EIP-2612</a> <code>permit</code> without <a href="https://eips.ethereum.org/EIPS/eip-1271">EIP-1271</a>, can't be used by any smart account, post-quantum or not. Under <a href="https://eips.ethereum.org/EIPS/eip-8151">EIP-8151</a> they no longer accept the old ECDSA key of an account that has adopted code, so a migrated account is locked out of them rather than exposed through them. Fixing them is up to the applications; <a href="https://kevaundray.github.io/pq-chain-analysis/">pq-chain-analysis</a> measures how much value sits behind them.</p>
 <details>
 <summary>Spec details for implementers</summary>
 <div>
